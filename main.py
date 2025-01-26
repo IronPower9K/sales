@@ -100,14 +100,15 @@ with tabs[0]:
     st.write(f"Total Revenue: {total_revenue} ₩")
 
 # Data Modification Tab
-# Data Modification Tab
 with tabs[1]:
     st.title('Data Modification')
 
-    st.write("Modify the data below. Adjust values and click 'Save Changes' to apply updates. You can also add new rows.")
+    st.write("Modify the data below. Adjust values and click 'Save Changes' to apply updates.")
+
+    # Use shared session state for data editing
+    editable_data = st.session_state['data']
 
     # Display the editable data table
-    editable_data = data.copy()
     for idx, row in editable_data.iterrows():
         col1, col2, col3, col4, col5 = st.columns(5)
         with col1:
@@ -136,7 +137,7 @@ with tabs[1]:
 
     if st.button("Add New Row"):
         if new_product_name:
-            # Append the new row to the DataFrame
+            # Append the new row to the shared DataFrame
             new_row = {
                 "Product Name": new_product_name,
                 "Total Quantity": new_total_quantity,
@@ -145,12 +146,15 @@ with tabs[1]:
                 "Price": new_price,
                 "Revenue": new_sold_quantity * new_price
             }
-            editable_data = pd.concat([editable_data, pd.DataFrame([new_row])], ignore_index=True)
+            st.session_state['data'] = pd.concat([st.session_state['data'], pd.DataFrame([new_row])], ignore_index=True)
             st.success("New row added successfully!")
         else:
             st.error("Please provide a valid product name.")
 
     if st.button('Save Changes'):
-        editable_data['Revenue'] = editable_data['Sold Quantity'] * editable_data['Price']  # Update revenue dynamically
-        st.session_state['data'] = editable_data
+        # Dynamically update Revenue
+        st.session_state['data']['Revenue'] = st.session_state['data']['Sold Quantity'] * st.session_state['data']['Price']
         st.success("Data updated successfully!")
+
+    # Display updated data
+    st.dataframe(st.session_state['data'])
