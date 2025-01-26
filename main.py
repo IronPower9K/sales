@@ -100,10 +100,11 @@ with tabs[0]:
     st.write(f"Total Revenue: {total_revenue} ₩")
 
 # Data Modification Tab
+# Data Modification Tab
 with tabs[1]:
     st.title('Data Modification')
 
-    st.write("Modify the data below. Adjust values and click 'Save Changes' to apply updates.")
+    st.write("Modify the data below. Adjust values and click 'Save Changes' to apply updates. You can also add new rows.")
 
     # Display the editable data table
     editable_data = data.copy()
@@ -124,6 +125,30 @@ with tabs[1]:
         with col5:
             editable_data.at[idx, 'Price'] = st.number_input(
                 f'Price {idx}', value=row['Price'], min_value=0, key=f'price_{idx}')
+
+    # Adding new row functionality
+    st.header("Add New Row")
+    new_product_name = st.text_input("New Product Name", key="new_product_name")
+    new_total_quantity = st.number_input("New Total Quantity", min_value=0, step=1, key="new_total_quantity")
+    new_sold_quantity = st.number_input("New Sold Quantity", min_value=0, step=1, key="new_sold_quantity")
+    new_remaining_quantity = st.number_input("New Remaining Quantity", min_value=0, step=1, key="new_remaining_quantity")
+    new_price = st.number_input("New Price", min_value=0, step=1, key="new_price")
+
+    if st.button("Add New Row"):
+        if new_product_name:
+            # Append the new row to the DataFrame
+            new_row = {
+                "Product Name": new_product_name,
+                "Total Quantity": new_total_quantity,
+                "Sold Quantity": new_sold_quantity,
+                "Remaining Quantity": new_remaining_quantity,
+                "Price": new_price,
+                "Revenue": new_sold_quantity * new_price
+            }
+            editable_data = pd.concat([editable_data, pd.DataFrame([new_row])], ignore_index=True)
+            st.success("New row added successfully!")
+        else:
+            st.error("Please provide a valid product name.")
 
     if st.button('Save Changes'):
         editable_data['Revenue'] = editable_data['Sold Quantity'] * editable_data['Price']  # Update revenue dynamically
