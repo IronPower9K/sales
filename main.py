@@ -1,37 +1,53 @@
 import streamlit as st
 import pandas as pd
 import datetime
+import os
+
+# File to save/load data
+DATA_FILE = "sales_data.csv"
+HISTORY_FILE = "sales_history.csv"
 
 # Initialize or load data
 def load_data():
-    # Replace this with actual data loading logic if needed
-    data = pd.DataFrame({
-        'Product Name': [
-            '1캐릭터뱃지', '2커스터드푸딩뱃지', '3파파야푸딩뱃지', '4일반스티커', '5조각스티커',
-            '6사각스티커', '7캐릭터키링', '8비즈키링', '9떡메모지', '10엽서',
-            '11포스터', '12비즈반지', '12비즈반지-1', '12비즈반지-2','엽서4종'
-        ],
-        'Total Quantity': [4, 2, 2, 55, 480, 432, 60, 21, 83, 848, 8, 6, 2, 1,480],
-        'Sold Quantity': [0] * 15,
-        'Remaining Quantity': [4, 2, 2, 55, 480, 432, 60, 21, 83, 848, 8, 6, 2, 1,480],
-        'Price': [4000, 5000, 5000, 3000, 1000, 500, 4000, 7000, 2000, 1000, 4000, 4000, 3300, 5000, 3500],
-        'Revenue': [0] * 15
-    })
+    if os.path.exists(DATA_FILE):
+        data = pd.read_csv(DATA_FILE)
+    else:
+        data = pd.DataFrame({
+            'Product Name': [
+                '1캐릭터뱃지', '2커스터드푸딩뱃지', '3파파야푸딩뱃지', '4일반스티커', '5조각스티커',
+                '6사각스티커', '7캐릭터키링', '8비즈키링', '9떡메모지', '10엽서',
+                '11포스터', '12비즈반지', '12비즈반지-1', '12비즈반지-2', '엽서4종'
+            ],
+            'Total Quantity': [4, 2, 2, 55, 480, 432, 60, 21, 83, 848, 8, 6, 2, 1, 480],
+            'Sold Quantity': [0] * 15,
+            'Remaining Quantity': [4, 2, 2, 55, 480, 432, 60, 21, 83, 848, 8, 6, 2, 1, 480],
+            'Price': [4000, 5000, 5000, 3000, 1000, 500, 4000, 7000, 2000, 1000, 4000, 4000, 3300, 5000, 3500],
+        })
+        # Calculate initial Revenue
+        data['Revenue'] = data['Sold Quantity'] * data['Price']
+        save_data(data)  # Save initial data
     return data
 
-# Save data as an Excel file
-def save_to_excel(df):
-    file_name = f"sales_data_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-    df.to_excel(file_name, index=False)
-    return file_name
+def save_data(df):
+    df.to_csv(DATA_FILE, index=False)
+
+def load_sales_history():
+    if os.path.exists(HISTORY_FILE):
+        return pd.read_csv(HISTORY_FILE)
+    else:
+        sales_history = pd.DataFrame(columns=['Timestamp', 'Product Name', 'Quantity Sold', 'Revenue'])
+        sales_history.to_csv(HISTORY_FILE, index=False)
+        return sales_history
+
+def save_sales_history(df):
+    df.to_csv(HISTORY_FILE, index=False)
 
 # Main application
-# Use session state to persist data
 def initialize_session_state():
     if 'data' not in st.session_state:
         st.session_state['data'] = load_data()
     if 'sales_history' not in st.session_state:
-        st.session_state['sales_history'] = pd.DataFrame(columns=['Timestamp', 'Product Name', 'Quantity Sold', 'Revenue'])
+        st.session_state['sales_history'] = load_sales_history()
 
 initialize_session_state()
 data = st.session_state['data']
@@ -76,7 +92,7 @@ with tabs[0]:
                 data.at[product_index, 'Sold Quantity'] += quantity
                 data.at[product_index, 'Remaining Quantity'] -= quantity
 
-                # Update Revenue dynamically
+                # Update Revenue dynamically based on Sold Quantity and Price
                 data.at[product_index, 'Revenue'] = data.at[product_index, 'Sold Quantity'] * data.at[product_index, 'Price']
 
                 # Log the sale
@@ -88,29 +104,35 @@ with tabs[0]:
                 }
                 sales_history = pd.concat([sales_history, pd.DataFrame([new_sale])], ignore_index=True)
 
+        # Save updates to files
+        save_data(data)
+        save_sales_history(sales_history)
+
+        # Reload data from CSV
+        st.session_state['data'] = load_data()
+        st.session_state['sales_history'] = load_sales_history()
+
         # Clear selected products after submission
         st.session_state['selected_products'] = []
-        st.session_state['data'] = data
-        st.session_state['sales_history'] = sales_history
-        st.success("Sales recorded successfully!")
+        st.success("Sales recorded successfully and data reloaded!")
 
     # Display updated data
-    st.dataframe(data)
+    st.dataframe(st.session_state['data'])
 
     # Display sales history
     st.header('Sales History')
-    st.dataframe(sales_history)
+    st.dataframe(st.session_state['sales_history'])
 
     # Download updated data as Excel
     st.header('Download Updated Data')
     if st.button('Download Excel'):
-        file_path = save_to_excel(data)
+        file_path = save_to_excel(st.session_state['data'])
         with open(file_path, 'rb') as f:
             st.download_button('Download Excel File', f, file_name=file_path)
 
     # Final totals
     st.header('Summary')
-    total_revenue = data['Revenue'].sum()
+    total_revenue = st.session_state['data']['Revenue'].sum()
     st.write(f"Total Revenue: {total_revenue} ₩")
 
 # Data Modification Tab
@@ -161,6 +183,7 @@ with tabs[1]:
                 "Revenue": new_sold_quantity * new_price
             }
             st.session_state['data'] = pd.concat([st.session_state['data'], pd.DataFrame([new_row])], ignore_index=True)
+            save_data(st.session_state['data'])  # Save data after adding new row
             st.success("New row added successfully!")
         else:
             st.error("Please provide a valid product name.")
@@ -168,6 +191,7 @@ with tabs[1]:
     if st.button('Save Changes'):
         # Dynamically update Revenue
         st.session_state['data']['Revenue'] = st.session_state['data']['Sold Quantity'] * st.session_state['data']['Price']
+        save_data(st.session_state['data'])  # Save changes to file
         st.success("Data updated successfully!")
 
     # Display updated data
