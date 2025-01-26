@@ -46,14 +46,27 @@ with tabs[0]:
 
     # Input form for updating sales
     st.header('Update Sales')
-    selected_products = st.multiselect('Select Products', data['Product Name'])
+    if 'selected_products' not in st.session_state:
+        st.session_state['selected_products'] = []
+
+    selected_products = st.multiselect(
+        'Select Products', 
+        data['Product Name'], 
+        default=st.session_state['selected_products']
+    )
+    
     sold_quantities = {}
     for product in selected_products:
-        sold_quantities[product] = st.number_input(f'{product}', min_value=0, step=1, key=f"sales_{product}")
+        sold_quantities[product] = st.number_input(
+            f'{product}', min_value=0, step=1, key=f"sales_{product}"
+        )
 
     # Display total revenue for selected products
     if selected_products:
-        total_sale_revenue = sum(sold_quantities[product] * data[data['Product Name'] == product]['Price'].values[0] for product in selected_products)
+        total_sale_revenue = sum(
+            sold_quantities[product] * data[data['Product Name'] == product]['Price'].values[0]
+            for product in selected_products
+        )
         st.write(f"Total Revenue for Selected Products: {total_sale_revenue} ₩")
 
     if st.button('Submit Sale'):
@@ -65,7 +78,6 @@ with tabs[0]:
 
                 # Update Revenue dynamically
                 data.at[product_index, 'Revenue'] = data.at[product_index, 'Sold Quantity'] * data.at[product_index, 'Price']
-                
 
                 # Log the sale
                 new_sale = {
@@ -76,6 +88,8 @@ with tabs[0]:
                 }
                 sales_history = pd.concat([sales_history, pd.DataFrame([new_sale])], ignore_index=True)
 
+        # Clear selected products after submission
+        st.session_state['selected_products'] = []
         st.session_state['data'] = data
         st.session_state['sales_history'] = sales_history
         st.success("Sales recorded successfully!")
