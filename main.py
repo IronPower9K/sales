@@ -46,7 +46,7 @@ with tabs[0]:
 
     # Input form for updating sales
     st.header('Update Sales')
-    selected_products = st.multiselect('Select Products', data['Product Name'])
+    selected_products = st.multiselect('Select Products', data['Product Name'],disabled=True)
     sold_quantities = {}
     for product in selected_products:
         sold_quantities[product] = st.number_input(f'{product}', min_value=0, step=1, key=f"sales_{product}")
